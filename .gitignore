@@ -16,6 +16,7 @@
 !.gitattributes
 !CLAUDE.md
 !README.md
+!ARSENALSOS_PORTING.md
 
 # --- 按需放行自定义内容（取消注释并改为你的路径）---
 # !local_manifests/
