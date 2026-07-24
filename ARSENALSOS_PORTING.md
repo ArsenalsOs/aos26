@@ -3,6 +3,27 @@
 > 检索日期 2026-07-22。基线：ArsenalsOS = LineageOS 21.0 / Android 14（AOSP tag `android-14.0.0_r25`，manifest `ArsenalsOs/aos_manifest`）。移植目标：LineageOS 23.2 / Android 16（目标树 `/root/arsenals/aos/los`，AOSP tag `android-16.0.0_r4`，release `bp4a`）。
 > 源码树 `/root/arsenals/aos/aos`（旧）。下列结论由 4 路并行检索 agent + 直接读取源码交叉验证（含在 los/23.2 目标树实测比对）得出。
 
+---
+
+## 移植后状态（2026-07-24 逐 commit 核查后更新）
+
+**移植已完成**。另一 agent 逐 commit 核查：38/38 已配对，~22 完整移植 / ~10 移植-适配，1 部分移植（kernelsu Minor），0 意外引入。核心定制（AOS 服务 / rebrand / releasekey / KernelSU / marble / MindTheGapps）移植充分，A16 适配有高质量改进（@hide 规避 metalava / reflection / getSystemService / shareduid allowlist / kprobes hook / releasekey 体系闭合 / rebrand 比原版更完整 / neverallow 核查通过）。
+
+**核查结论与本文档勘误**：
+
+- ✅ **C1 snet spoof（AosHooks / AndroidKeyStoreSpi / SetSafetyNetProps）有意不移植** —— 非遗漏。21.0 编译期 framework 篡改在 A16 keystore2 大变 + 硬件 attestation 收紧下已失效。改用 **PIF + TrickyStore 模块**（运行时 zygisk hook + resetprop + keybox）替代，与 EvolutionX/crDroid/PixelOS A16 一致。源码 grep 零命中符合预期（PIF 是模块，不在源码树）。详见记忆 `reference-pif-trickystore`。**本文档 §10 P1#7#8 标"待重写"应理解为"有意不移植 + PIF/TrickyStore 模块替代"。**
+- ✅ **C2 内核 5.10 不需升级 6.x** —— LineageOS 23.2 官方 marble 就用 5.10（跟随官方），A16 不强制 6.x（5.10 GKI android13-5.10 KMI 兼容 A16 userspace）。**已实机 boot 成功**（baseline + KSU boot 5.10 内核开机正常，manager 连上）。本文档 §10 P1#9"升级 6.x 最大工程"在 23.2 **不再需要**。
+- ✅ **M1 aos_service 专用 SELinux 域已补**（commit `6df6cb2c1` system/sepolicy）：`type aos_service, system_api_service, system_server_service, service_manager_type` + service_contexts `aos` 条目 + system_server/untrusted_app_all allow + prebuilts/api/202504 同步。对齐 21.0 `bdd66580`/`e1e99216`。`service_fuzzer_bindings.go` 23.2 已删不再适用。
+- ⚠️ **M2 manifest 持久化待补**：ArsenalsOS commit 在各子项目本地分支，`repo sync --force-sync` 会丢。需建自有 fork（github ArsenalsOs/aos_*）+ local_manifests 覆盖（类 21.0 aos.xml，参考 `~/aos-manifest-reference.xml`）。
+- **§5 勘误**：`583dfba9 merge_dtbs` 误标为 Y-D-Lu 专属，实为上游 Arian Kulmer commit，23.2 上游已含，**免移植**。vendor/lineage fork 实际专属 commit 为 4 个（非 5）。
+- **§4 勘误**：device/lineage/sepolicy 两 Revert（legacy camera HAL1 `ff9318d` + ultra-legacy qcom `151f52b`）在 23.2 **不再适用/不需移植**（核查确认不移植正确）。
+- **§10 P2#12 勘误**：`buildinfo.sh`（ro.arsenals.device）在 23.2 已被 `build/soong/scripts/gen_build_prop.py` 取代，移植改的是后者（非 buildinfo.sh）。
+- **Minor 待确认**：vendor/xiaomi/marble thermal（`b3cdd594` 清空 thermal-*.conf）原意是禁热限流（性能调优，非移植必需，有烧机风险），23.2 未做，待用户定。
+
+**已完成 commit 清单**（los 树各子项目本地分支）：vendor/lineage、frameworks/base（9660b93 + 69c147b）、build/soong（918286b90 + 3410717a6）、build/make、device/xiaomi/marble、device/lineage/sepolicy（546c956）、device/arsenals/sepolicy、vendor/arsenals/{aos,arsenalsos}、kernel/arsenals/kernelsu（79feeb91 + feef0dd6 + f7fb4da1，KSU_VERSION=32563，签名 0x03fd）、kernel/xiaomi/sm8450、**system/sepolicy（6df6cb2c1，本次补 aos service 域）**。
+
+---
+
 ## 0. 总览：定制高度集中
 
 ArsenalsOS 的全部专属代码只落在少数几个仓库/目录，且围绕三大功能主题：
