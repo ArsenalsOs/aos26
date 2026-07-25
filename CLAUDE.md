@@ -248,7 +248,7 @@ mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
 - github 组织 `ArsenalsOs`,用户 `Y-D-Lu`(admin),token 在 `~/.git-credentials`(用 `git credential fill` 提取)
 - 14 子项目→ArsenalsOs fork 统一 `aos26` 分支:11 小/中仓库 `aos_*` + 3 大仓库(frameworks/base, kernel/xiaomi/sm8450, vendor/xiaomi/marble)**fork of upstream** 同名(`android_frameworks_base`/`android_kernel_xiaomi_sm8450`/`proprietary_vendor_xiaomi_marble`),增量 push 绕 github 110万commit size 限制
 - `.repo/local_manifests/arsenals.xml`:remote arsenals + 14 project revision=aos26 + build/make 6 linkfile
-- **顶层 los 仓 → `ArsenalsOs/aos_los:master`**(已 push;***REDACTED*** 等 keystore 密码已 filter-branch 清除;git author 邮箱 460999218@qq.com 公开,如敏感可再 filter-branch 改 author)
+- **顶层 los 仓 → `ArsenalsOs/aos26:master`**(已 push;***REDACTED*** 等 keystore 密码已 filter-branch 清除;git author 邮箱 460999218@qq.com 公开,如敏感可再 filter-branch 改 author)
 
 ## 17. ⚠️ 关键坑（agent 接手必读,踩过都疼）
 
