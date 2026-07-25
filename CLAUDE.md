@@ -14,7 +14,7 @@
 | Manifest 上游 | `https://github.com/LineageOS/android.git`（本树实际用清华镜像，见下） |
 | 当前使用的 manifest remote | `https://mirrors.tuna.tsinghua.edu.cn/git/lineageOS/LineageOS/android.git` |
 | 子项目数量 | **1164** 个 git 项目（`.repo/project.list`） |
-| 自定义 local_manifests | **无**（当前为纯上游 LineageOS 23.2，未叠加自定义设备/补丁 manifest） |
+| 自定义 local_manifests | **有**：`.repo/local_manifests/{arsenals.xml,marble.xml}`（ArsenalsOS fork aos26 + xiaomi marble 设备，详见 §14-17） |
 | 工作目录 | `/root/arsenals/aos/los` |
 | 编译机资源 | 16 核 / 49 GB RAM / 16 GB swap |
 
@@ -46,7 +46,7 @@
 | `lineage-sdk/` | LineageOS SDK（`lineage` 平台 API、Java/Native 接口） |
 | `vendor/lineage/` | **LineageOS 产品定义核心**：`config/`(版本/构建配置)、`vars/`(设备/release 变量)、`release/`(release config)、`overlay/`、`build/`(envsetup/soong/core/target/tasks)、`product/`、`bootanimation/`、`charger/`、`audio/`、`spn/`、`tools/` |
 | `build/` | AOSP 构建系统。`build/envsetup.sh` → 软链 `build/make/envsetup.sh`；含 `make/`、`soong/`、`blueprint/`、`core/`→`make/core`、`target/`、`tools/`、`release/` |
-| `device/` | 设备树。当前仅通用：`generic/`、`google/`、`google_car/`、`sample/`、`qcom/`(sepolicy)、`lineage/`(atv/car/sepolicy)。**无具体手机 OEM 设备树**，需通过 local_manifests 按需引入 |
+| `device/` | 设备树。通用(`generic/google/google_car/sample/qcom/lineage`)+ **xiaomi marble**(SM8450,local_manifests 引入,见 §14) + `arsenals/`(sepolicy) |
 | 其他标准 AOSP 树 | `art` `bionic` `bootable` `cts` `dalvik` `developers` `development` `external`(480) `frameworks` `hardware` `kernel` `libcore` `libnativehelper` `packages` `pdk` `platform_testing` `prebuilts` `sdk` `system` `test` `toolchain` `tools` `trusty` `vendor` `android` |
 
 ## 4. 版本与 release 机制
@@ -211,3 +211,59 @@ adb reboot sideload && adb sideload <zip>   # 手动刷入
 - 构建状态：https://buildkite.com/lineageos
 - 下载：https://download.lineageos.org/
 - 编译环境搭建：会话内《ArsenalsOs 环境搭建》文档（WSL2/apt/repo/代理/swap/ccache/签名）
+
+---
+
+## 14. ArsenalsOS 定制（2026-07-24/25 移植完成，agent 接手必读）
+
+ArsenalsOS（21.0 二次分发 OS）已移植到本 23.2 树。核心定制（在各子项目 `aos26` 分支 + `.repo/local_manifests/arsenals.xml`）：
+
+| 定制 | 实现 | 位置 |
+|---|---|---|
+| rebrand | `ro.lineage.*`→`ro.arsenals.*`、zip 前缀 `arsenals-`、`LINEAGE_BUILDTYPE:=OFFICIAL` | vendor/lineage(version.mk/common_mobile.mk/backuptool/property_contexts/bacon.mk/envsetup.sh) |
+| product 名 | `arsenals_marble` | device/xiaomi/marble/arsenals_marble.mk + AndroidProducts.mk |
+| releasekey | `~/.arsenals-certs/`(9 套 key,home 持久)→`vendor/lineage-priv/` symlink;`PRODUCT_DEFAULT_DEV_CERTIFICATE:=vendor/lineage-priv/releasekey` | device/xiaomi/marble + vendor/lineage-priv |
+| AOS 系统服务 | `Context.AOS_SERVICE="aos"`(@hide)+SystemServer.startAosServices 反射+vendor/arsenals/{aos,arsenalsos} boot jar | frameworks/base + vendor/arsenals + build/soong package_allowed_list |
+| sepolicy | `aos_service` 专用域(type+service_contexts+system_server/untrusted_app_all allow) | system/sepolicy + device/arsenals/sepolicy |
+| KernelSU | `=y` 编进 Image,KSU_VERSION=32563,签名 0x03fd(rootarsenals) | kernel/arsenals/kernelsu(浅克隆已 unshallow,count=2563) |
+| thermal 禁限流 | 30 thermal-*.conf 清空 0 字节(⚠️无热保护) | vendor/xiaomi/marble |
+| MindTheGapps | arm64 | vendor/gapps |
+| 设备 | xiaomi marble(SM8450,POCO F5/Redmi Note 12 Turbo,`ro.boot.hwc=CN` 区分) | device/xiaomi/marble + sm8450-common |
+
+## 15. 编译流程（ArsenalsOS）
+
+```bash
+cd /root/arsenals/aos/los
+source build/make/envsetup.sh     # 直接路径,绕 ugrep/symlink 问题(不用 build/envsetup.sh 软链)
+breakfast marble                  # ⚠️ device 名 marble,不是 arsenals_marble!(vendor/lineage breakfast 拼 arsenals_$target = lunch arsenals_marble-bp4a-userdebug)
+mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
+# 产物 out/target/product/marble/arsenals-23.2-<date>-OFFICIAL-marble.zip + boot.img(含 KSU)
+# 后台跑用 setsid 脱离 harness(避免 2h 上限): setsid bash -c '...' > log 2>&1 < /dev/null &
+```
+
+只编 boot:`make bootimage`(不是 `make sepolicy`,后者非 target)。
+
+## 16. fork 持久化（防 `repo sync --force-sync` 丢）
+
+- github 组织 `ArsenalsOs`,用户 `Y-D-Lu`(admin),token 在 `~/.git-credentials`(用 `git credential fill` 提取)
+- 14 子项目→ArsenalsOs fork 统一 `aos26` 分支:11 小/中仓库 `aos_*` + 3 大仓库(frameworks/base, kernel/xiaomi/sm8450, vendor/xiaomi/marble)**fork of upstream** 同名(`android_frameworks_base`/`android_kernel_xiaomi_sm8450`/`proprietary_vendor_xiaomi_marble`),增量 push 绕 github 110万commit size 限制
+- `.repo/local_manifests/arsenals.xml`:remote arsenals + 14 project revision=aos26 + build/make 6 linkfile
+- **顶层 los 仓无 remote,绝不 push**(敏感私密数据)
+
+## 17. ⚠️ 关键坑（agent 接手必读,踩过都疼）
+
+1. **breakfast 参数是 device 名 `marble`**,不是 product 名 `arsenals_marble`(后者会拼成 `arsenals_arsenals_marble` 找不到 product)
+2. **`repo start` 会丢 DETACHED ArsenalsOS commits**:device/xiaomi/marble 的 aos26 应=ArSenalsOS(bf84058 gapps inherit+2742af3 product name+4ad3ac4 releasekey)。若 breakfast 报 `Don't have product spec for arsenals_marble`(arsenals_marble.mk 不见),用 `git -C device/xiaomi/marble reflog` 找 dangling `bf84058`→`git reset --hard bf84058`→`git push --force github aos26`
+3. **arsenals.xml 必须 `<remove-project>`**:default/marble 已有 frameworks/base 等 9 个,arsenals.xml 必须先 `<remove-project name="<upstream>"/>`(如 `LineageOS/android_frameworks_base`)再加 ArsenalsOs 的,否则 `mka bacon` 在 `build-manifest.xml` 报 `duplicate path frameworks/base` 失败
+4. **KSU =y 32563**:改签名 hash 要同步改 manager(别只改内核)。unshallow 后 commit count=2563,Kbuild 算 32563。浅克隆会算成 30003 导致 manager 版本不匹配连不上
+5. **thermal 清空无热保护**⚠️:刷机后高负载可能过热
+6. **token 提取**用 `printf "protocol=https\nhost=github.com\n\n" | git credential fill`(手动 sed ~/.git-credentials 会取错空条目报 Bad credentials)
+7. **fork of upstream push 增量**:3 大仓库 fork 共享 lineage-23.2 history,push aos26 只推 arsenals commits。fork 是 async,大 repo(frameworks/base)写权限要等 15-30s,首次 push 可能 `No anonymous write access`,重试。vendor/xiaomi/marble 用 `GIT_LFS_SKIP_PUSH=1`(blob 在 TheMuppets LFS server)
+8. **userdebug+OFFICIAL+ro.debuggable=0**:release 性质(LineageOS 方式),21.0 也是 userdebug
+9. **SafetyNet/Play Integrity**:不移植 21.0 framework 篡改(A16 keystore2 失效),改用 PIF+TrickyStore 模块(运行时 zygisk hook,刷机后装)
+
+## 18. ArsenalsOS 参考
+
+- 移植清单:`ARSENALSOS_PORTING.md`(顶层 git,含逐 commit 核查+勘误+移植后状态)
+- 记忆 `~/.claude/projects/-root-arsenals-aos-los/memory/`:project-arsenalslos, project-arsenalsos-porting, reference-arsenalsos-env-setup, reference-kernelsu-loading-detection, reference-pif-trickystore, reference-m2-fork-persistence
+- 21.0 源 `/root/arsenals/aos/aos`(可删,manifest 参考 `~/aos-manifest-reference.xml`)
