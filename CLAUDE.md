@@ -136,9 +136,9 @@ cd ~/.arsenals-certs
 openssl pkcs8  -in releasekey.pk8 -inform DER -outform PEM -out releasekey.priv.pem
 openssl pkcs12 -export -in releasekey.x509.pem -inkey releasekey.priv.pem \
     -out releasekey.pk12 -name ReleaseKey
-keytool -importkeystore -deststorepass '***REDACTED***' -destkeypass '***REDACTED***' \
+keytool -importkeystore -deststorepass '<keystore-password>' -destkeypass '<keystore-password>' \
     -destkeystore releasekey.keystore -srckeystore releasekey.pk12 \
-    -srcstoretype PKCS12 -srcstorepass '***REDACTED***' -alias releasekey
+    -srcstoretype PKCS12 -srcstorepass '<keystore-password>' -alias releasekey
 
 # 3) 让构建使用自签证书：在 build/make/core/config.mk 设置
 #    PRODUCT_DEFAULT_DEV_CERTIFICATE := <你的证书目录>/releasekey
