@@ -264,5 +264,40 @@ mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
 ## 18. ArsenalsOS 参考
 
 - 移植清单:`ARSENALSOS_PORTING.md`(顶层 git,含逐 commit 核查+勘误+移植后状态)
-- 记忆 `~/.claude/projects/-root-arsenals-aos-los/memory/`:project-arsenalslos, project-arsenalsos-porting, reference-arsenalsos-env-setup, reference-kernelsu-loading-detection, reference-pif-trickystore, reference-m2-fork-persistence
-- 21.0 源 `/root/arsenals/aos/aos`(可删,manifest 参考 `~/aos-manifest-reference.xml`)
+- 记忆 `~/.claude/projects/-root-arsenals-aos-los/memory/`:project-arsenalslos, project-arsenalsos-porting, reference-arsenalsos-env-setup, reference-kernelsu-loading-detection, reference-pif-trickystore, reference-m2-fork-persistence, feedback-no-plaintext-in-cleanup
+- 固定点 manifest:`ArsenalsOs/aos_manifest:los-23.2`(另一台机器 `repo init -u ... -b los-23.2` 一条命令 sync,见 §19)
+- 21.0 源 `/root/arsenals/aos/aos`(21.0 仓全 push 后可删,见 §19.3)
+
+## 19. 23.2 固定点 manifest 集成(像 aos 那样,2026-07-25)
+
+ArsenalsOS 23.2 的固定点 manifest(上游锁 commit,ArsenalsOs fork 用 aos26 分支可更新),另一台机器一条命令 sync,不用 local_manifests。
+
+- **manifest 仓**:`ArsenalsOs/aos_manifest:los-23.2` 分支(commit `fad70ed`)
+- **结构**:单 `default.xml`(1177 project,合并清华 default.xml + local_manifests/{arsenals.xml,marble.xml},已 resolve remove-project + duplicate)
+- **revision**:1161 上游锁当前 lineage-23.2 HEAD commit(固定点)+ 14 ArsenalsOs fork `revision="aos26"`(不锁,可更新)+ 2 darwin prebuilts 保留分支(Linux 不 sync)
+- **remote**:`github`(fetch=`..` 相对 manifest 仓,repo `..` 去两段 → `github.com/LineageOS/`)+ `aosp`(googlesource)+ `lineageos`+ `arsenals`(github.com/ArsenalsOs/)
+- **build/make 6 linkfile**(对齐 arsenals.xml)
+
+**另一台机器 sync:**
+```bash
+git config --global url.http://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com
+export https_proxy=http://<host_ip>:10811   # 拉 github remote(LineageOS 上游)
+repo init -u https://github.com/ArsenalsOs/aos_manifest.git -b los-23.2
+repo sync -c -j$(nproc --all) --no-tags
+# 编译:source build/make/envsetup.sh && breakfast marble && mka bacon
+```
+
+**对比 aos(21.0)**:`aos_manifest:aos` 分支(default.xml + snippets/{lineage.xml 锁 commit, aos.xml 14 fork}),los-23.2 是单 default.xml(无 snippets)。
+
+### 19.1 生成方法(repo manifest -r 绕过)
+
+`repo manifest -r`(锁当前 sync commit)失败,因 local_manifests 有 §19.2 两个问题。用 python 脚本直接解析 manifest 文件(按 `default → marble → arsenals` 正确顺序合并,remove 生效)+ `git -C <path> rev-parse HEAD` 锁上游 commit,绕过 repo 严格检查。darwin prebuilts(本地无 sync)保留分支。重生成:见会话 `/tmp/gen-pinned-manifest.py`(临时,可重写)。
+
+### 19.2 遗留问题(不影响 sync,构建 OK)
+
+1. **arsenals.xml remove-project 顺序**:文件名排序 `arsenals.xml` 在 `marble.xml` 前,`<remove-project name="android_kernel_xiaomi_sm8450">` + `android_device_xiaomi_marble`(无 `LineageOS/` 前缀)执行时 marble.xml 还没声明这俩 project → `repo manifest -r` / `repo forall` 报 `non-existent project`。构建 OK(arsenals.xml fork 覆盖 marble.xml 上游同 path)。修复:把这 2 个 remove-project 移到 marble.xml(声明之后),或文件名排序在后。当前 local_manifests 不动(构建依赖)。
+2. **2 个 darwin prebuilts 保留 `lineage-23.2` 分支**(prebuilts/clang/host/darwin-x86, prebuilts/go/darwin-x86):本地 Linux 没 sync(无 .git),ls-remote aosp googlesource 代理不通,锁不了 commit。Linux 编译机 repo sync 跳过 darwin(groups),不影响构建。macOS 编译机若用需手动锁。
+
+### 19.3 恢复被误删的 21.0 仓(2026-07-25)
+
+23.2 移植转 fork-of-upstream 时,误删了 3 个与 21.0 同名的 fork:false 仓(`aos_frameworks_base`/`aos_kernel_xiaomi_sm8450`/`aos_vendor_xiaomi_marble`),影响 21.0 aos 工程。已重建 push 回(`aos` 分支,public):`aos/frameworks/base`→`ArsenalsOs/aos_frameworks_base`(c5ef0f27)、`aos/kernel/xiaomi/sm8450`→`ArsenalsOs/aos_kernel_xiaomi_sm8450`(1787a1b8,LFS skip)、`aos/vendor/xiaomi/marble`→`ArsenalsOs/aos_vendor_xiaomi_marble`(b3cdd59)。21.0(aos)+ aosul 两工程所有 ArsenalsOs 仓本地 HEAD 已全在 github(无未 push),可安全删除 aos 工程。
