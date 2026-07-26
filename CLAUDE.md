@@ -300,4 +300,33 @@ repo sync -c -j$(nproc --all) --no-tags
 
 ### 19.3 恢复被误删的 21.0 仓(2026-07-25)
 
-23.2 移植转 fork-of-upstream 时,误删了 3 个与 21.0 同名的 fork:false 仓(`aos_frameworks_base`/`aos_kernel_xiaomi_sm8450`/`aos_vendor_xiaomi_marble`),影响 21.0 aos 工程。已重建 push 回(`aos` 分支,public):`aos/frameworks/base`→`ArsenalsOs/aos_frameworks_base`(c5ef0f27)、`aos/kernel/xiaomi/sm8450`→`ArsenalsOs/aos_kernel_xiaomi_sm8450`(1787a1b8,LFS skip)、`aos/vendor/xiaomi/marble`→`ArsenalsOs/aos_vendor_xiaomi_marble`(b3cdd59)。21.0(aos)+ aosul 两工程所有 ArsenalsOs 仓本地 HEAD 已全在 github(无未 push),可安全删除 aos 工程。
+23.2 移植转 fork-of-upstream 时,误删了 3 个与 21.0 同名的 fork:false 仓(`aos_frameworks_base`/`aos_kernel_xiaomi_sm8450`/`aos_vendor_xiaomi_marble`),影响 21.0 aos 工程。已重建 push 回(`aos` 分支,public):`aos/frameworks/base`→`ArsenalsOs/aos_frameworks_base`(c5ef0f27)、`aos/kernel/xiaomi/sm8450`→`ArsenalsOs/aos_kernel_xiaomi_sm8450`(1787a1b8,LFS skip)、`aos/vendor/xiaomi/marble`→`ArsenalsOs/aos_vendor_xiaomi_marble`(b3cdd59)。21.0(aos)+ aosul 仓当时 HEAD 已 push(§19.3 恢复)。**注**:ultracode 后续发现 4 个未 push issue(§20.2 已补 push)。
+
+## 20. 3 仓整改 + 4 issue push(2026-07-26)
+
+### 20.1 3 仓整改(转 21.0 orphan 模式 + 改名 aos_ + 删 fork 仓)
+
+3 个 fork-of-upstream 仓(`android_frameworks_base`/`android_kernel_xiaomi_sm8450`/`proprietary_vendor_xiaomi_marble`)整改成 21.0 模式(first commit 标 lineage commit id + arsenals cherry-pick,可追溯上游),改名 `aos_`,和 21.0 共用仓(`aos` 分支 21.0 + `aos26` 分支 23.2)。删旧 fork 仓(`android_X`,github org 留干净 aos_)。
+
+| 仓 | aos26 | init lineage id | arsenals |
+|---|---|---|---|
+| `aos_frameworks_base` | 58673412a11e | 7d1834f73252 | 3(AOS_SERVICE/AOS service/uid.system) |
+| `aos_kernel_xiaomi_sm8450` | 1b287ddcf | e682ed2de | 2(KernelSU/track symlink) |
+| `aos_vendor_xiaomi_marble` | 3b991e9 | b86988f | 1(disable thermal),LFS skip |
+
+方法:`git checkout --orphan` + `git rm --cached` + 还原 arsenals 改的文件到上游(`git checkout <upstream> -- <files>`,删 arsenals 新增如 `drivers/kernelsu` symlink)+ `git add -A` + init commit(标 lineage id)+ cherry-pick arsenals。`arsenals.xml` 3 fork project name 改(`android_X`→`aos_X`,remove-project 不改)+ 固定点 manifest 重新生成(`gen-pinned-manifest.py`)+ push `aos_manifest:los-23.2`(6a35251)。
+
+### 20.2 4 issue push(应 push 尽 push,ultracode 发现)
+
+原 §19.3 "可删 aos 工程"有误——ultracode 发现 4 个未 push issue,已全部 push:
+
+| 工程 | 仓 | 分支 | 内容 |
+|---|---|---|---|
+| aosul | `aos_frameworks_base` | aosul(新建) | ba0b788e8cf5(4c9c85dacc + LoadedApk cn.arsenals 特殊处理) |
+| aosul | `aos_system_sepolicy` | aosul(新建) | 735d45fa2(seapp_contexts 加 shellarsenals + shizuku shell domain) |
+| aos | `aos_packages_apps_Settings` | aos(force) | 93c8c387b18(orphan 转,无 arsenals,init from lineage-21.0 bc34a195218,覆盖远程重新 init) |
+
+- aosul fb `4c9c85dacc` 与远程 aos=`c5ef0f27` 同消息不同 hash(分叉 4444ee59),push aosul 分支(21.0 aos=c5ef0f27 保留,两变体共存)
+- aos packages/apps/Settings 本地 = lineage-21.0 tip(无 arsenals),orphan 转(0 arsenals,push 小,绕过 12万 commit size 限制)
+
+整改 + 4 issue push 后,aos/aosul 全 push(repo forall 无 NOTINREMOTE),可安全删除 aos 工程。
