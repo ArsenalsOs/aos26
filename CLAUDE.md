@@ -304,17 +304,20 @@ repo sync -c -j$(nproc --all) --no-tags
 
 ## 20. 3 仓整改 + 4 issue push(2026-07-26)
 
-### 20.1 3 仓整改(转 21.0 orphan 模式 + 改名 aos_ + 删 fork 仓)
+### 20.1 3 仓整改(fork-of-upstream,21.0/23.2 不同 fork 仓)
 
-3 个 fork-of-upstream 仓(`android_frameworks_base`/`android_kernel_xiaomi_sm8450`/`proprietary_vendor_xiaomi_marble`)整改成 21.0 模式(first commit 标 lineage commit id + arsenals cherry-pick,可追溯上游),改名 `aos_`,和 21.0 共用仓(`aos` 分支 21.0 + `aos26` 分支 23.2)。删旧 fork 仓(`android_X`,github org 留干净 aos_)。
+3 仓整改成 **fork-of-upstream**(上游 history + arsenals,有 parent,可追溯上游),**不 orphan**。frameworks/base 21.0/23.2 共用仓(1aa3f624 在 lineage-23.2 history);kernel/vendor 21.0/23.2 上游不同 fork 树,不同仓。
 
-| 仓 | aos26 | init lineage id | arsenals |
-|---|---|---|---|
-| `aos_frameworks_base` | 58673412a11e | 7d1834f73252 | 3(AOS_SERVICE/AOS service/uid.system) |
-| `aos_kernel_xiaomi_sm8450` | 1b287ddcf | e682ed2de | 2(KernelSU/track symlink) |
-| `aos_vendor_xiaomi_marble` | 3b991e9 | b86988f | 1(disable thermal),LFS skip |
+| 仓 | 21.0 aos | 23.2 aos26 |
+|---|---|---|
+| `aos_frameworks_base`(共用) | fork of LineageOS,1aa3f624 + 3 arsenals(100703e87340) | 同仓,lineage-23.2 + 3 arsenals(3745041642f4) |
+| `aos_kernel_xiaomi_sm8450`(21.0)/ `aos26_kernel_xiaomi_sm8450`(23.2) | fork of cupid-development,709c02ad + 1 arsenals(fc00626a4700) | fork of LineageOS,e682ed2de + 2 arsenals(feef0dd67) |
+| `aos_vendor_xiaomi_marble`(21.0)/ `aos26_vendor_xiaomi_marble`(23.2) | fork of TheMuppets,**orphan**(818927cb init + b3cdd59,modem.img LFS 指针,b3cdd594bc) | fork of TheMuppets,b86988f + 1 arsenals(65c05a5) |
 
-方法:`git checkout --orphan` + `git rm --cached` + 还原 arsenals 改的文件到上游(`git checkout <upstream> -- <files>`,删 arsenals 新增如 `drivers/kernelsu` symlink)+ `git add -A` + init commit(标 lineage id)+ cherry-pick arsenals。`arsenals.xml` 3 fork project name 改(`android_X`→`aos_X`,remove-project 不改)+ 固定点 manifest 重新生成(`gen-pinned-manifest.py`)+ push `aos_manifest:los-23.2`(6a35251)。
+- **kernel 21.0(cupid-development 709c02ad)与 23.2(LineageOS e682ed2de)独立 fork 树,不共享 history** → 不同 fork 仓(aos_ 21.0 + aos26_ 23.2)。vendor 同(818927cb 不在 lineage-23.2 history)。
+- **frameworks/base 1aa3f624 在 lineage-23.2 history**(lineage-23.2 基于 lineage-21.0)→ 21.0/23.2 共用仓(aos + aos26 分支)。
+- **vendor 21.0 只能 orphan**:818927cb 不在 fork(TheMuppets 删了 lineage-21)+ modem.img 258MB 非 LFS(818927cb Initial import 没用 LFS)→ fork-of-upstream push size 限制,orphan(LFS 指针)绕过。
+- `arsenals.xml`(23.2):frameworks/base name=`aos_frameworks_base`(共用),kernel/vendor name=`aos26_`(23.2 不同仓)。固定点 manifest push `aos_manifest:los-23.2`(d181664)。
 
 ### 20.2 4 issue push(应 push 尽 push,ultracode 发现)
 
