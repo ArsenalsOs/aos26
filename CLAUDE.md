@@ -265,14 +265,14 @@ mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
 
 - 移植清单:`ARSENALSOS_PORTING.md`(顶层 git,含逐 commit 核查+勘误+移植后状态)
 - 记忆 `~/.claude/projects/-root-arsenals-aos-los/memory/`:project-arsenalslos, project-arsenalsos-porting, reference-arsenalsos-env-setup, reference-kernelsu-loading-detection, reference-pif-trickystore, reference-m2-fork-persistence, feedback-no-plaintext-in-cleanup
-- 固定点 manifest:`ArsenalsOs/aos_manifest:los-23.2`(另一台机器 `repo init -u ... -b los-23.2` 一条命令 sync,见 §19)
+- 固定点 manifest:`ArsenalsOs/aos_manifest:aos26`(另一台机器 `repo init -u ... -b aos26` 一条命令 sync,见 §19)
 - 21.0 源 `/root/arsenals/aos/aos`(21.0 仓全 push 后可删,见 §19.3)
 
 ## 19. 23.2 固定点 manifest 集成(像 aos 那样,2026-07-25)
 
 ArsenalsOS 23.2 的固定点 manifest(上游锁 commit,ArsenalsOs fork 用 aos26 分支可更新),另一台机器一条命令 sync,不用 local_manifests。
 
-- **manifest 仓**:`ArsenalsOs/aos_manifest:los-23.2` 分支(commit `fad70ed`)
+- **manifest 仓**:`ArsenalsOs/aos_manifest:aos26` 分支(commit `fad70ed`)
 - **结构**:单 `default.xml`(1177 project,合并清华 default.xml + local_manifests/{arsenals.xml,marble.xml},已 resolve remove-project + duplicate)
 - **revision**:1161 上游锁当前 lineage-23.2 HEAD commit(固定点)+ 14 ArsenalsOs fork `revision="aos26"`(不锁,可更新)+ 2 darwin prebuilts 保留分支(Linux 不 sync)
 - **remote**:`github`(fetch=`..` 相对 manifest 仓,repo `..` 去两段 → `github.com/LineageOS/`)+ `aosp`(googlesource)+ `lineageos`+ `arsenals`(github.com/ArsenalsOs/)
@@ -282,12 +282,12 @@ ArsenalsOS 23.2 的固定点 manifest(上游锁 commit,ArsenalsOs fork 用 aos26
 ```bash
 git config --global url.http://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com
 export https_proxy=http://<host_ip>:10811   # 拉 github remote(LineageOS 上游)
-repo init -u https://github.com/ArsenalsOs/aos_manifest.git -b los-23.2
+repo init -u https://github.com/ArsenalsOs/aos_manifest.git -b aos26
 repo sync -c -j$(nproc --all) --no-tags
 # 编译:source build/make/envsetup.sh && breakfast marble && mka bacon
 ```
 
-**对比 aos(21.0)**:`aos_manifest:aos` 分支(default.xml + snippets/{lineage.xml 锁 commit, aos.xml 14 fork}),los-23.2 是单 default.xml(无 snippets)。
+**对比 aos(21.0)**:`aos_manifest:aos` 分支(default.xml + snippets/{lineage.xml 锁 commit, aos.xml 14 fork}),aos26 是单 default.xml(无 snippets)。
 
 ### 19.1 生成方法(repo manifest -r 绕过)
 
@@ -317,7 +317,7 @@ repo sync -c -j$(nproc --all) --no-tags
 - **kernel 21.0(cupid-development 709c02ad)与 23.2(LineageOS e682ed2de)独立 fork 树,不共享 history** → 不同 fork 仓(aos_ 21.0 + aos26_ 23.2)。vendor 同(818927cb 不在 lineage-23.2 history)。
 - **frameworks/base 1aa3f624 在 lineage-23.2 history**(lineage-23.2 基于 lineage-21.0)→ 21.0/23.2 共用仓(aos + aos26 分支)。
 - **vendor 21.0 只能 orphan**:818927cb 不在 fork(TheMuppets 删了 lineage-21)+ modem.img 258MB 非 LFS(818927cb Initial import 没用 LFS)→ fork-of-upstream push size 限制,orphan(LFS 指针)绕过。
-- `arsenals.xml`(23.2):frameworks/base name=`aos_frameworks_base`(共用),kernel/vendor name=`aos26_`(23.2 不同仓)。固定点 manifest push `aos_manifest:los-23.2`(d181664)。
+- `arsenals.xml`(23.2):frameworks/base name=`aos_frameworks_base`(共用),kernel/vendor name=`aos26_`(23.2 不同仓)。固定点 manifest push `aos_manifest:aos26`(d181664)。
 
 ### 20.2 4 issue push(应 push 尽 push,ultracode 发现)
 
