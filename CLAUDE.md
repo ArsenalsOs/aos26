@@ -125,7 +125,7 @@ LineageOS 23.2 采用 Android 16 的 **release config** 机制（`vendor/lineage
 
 ```bash
 # 1) 生成证书（development/tools/make_key）
-subject='/C=CN/ST=Shaanxi/L=Baoji/O=Arsenals/OU=luyuedong/CN=arsenals/emailAddress=460999218@qq.com'
+subject='/C=CN/ST=Shaanxi/L=Baoji/O=Arsenals/OU=luyuedong/CN=Arsenals/emailAddress=460999218@qq.com'
 mkdir -p ~/.arsenals-certs
 for x in releasekey platform shared media networkstack; do
     ./development/tools/make_key ~/.arsenals-certs/$x "$subject"
@@ -144,6 +144,21 @@ keytool -importkeystore -deststorepass '<keystore-password>' -destkeypass '<keys
 #    PRODUCT_DEFAULT_DEV_CERTIFICATE := <你的证书目录>/releasekey
 #    （LineageOS 23.2 也可通过 release config 的 flag 覆盖签名指向，见 vendor/lineage/release/）
 ```
+
+### 9.1 ArsenalsOS key 策略（2026-07-27 核实，md5 对比 AOSP 默认）
+
+`~/.arsenals-certs` 的 key 分两类（用 `md5sum` 对比 `build/make/target/product/security/` 证实）：
+
+| 类 | key | 来源 |
+|---|---|---|
+| **自定义**（make_key 生成，subject `CN=Arsenals`） | releasekey, platform, shared, media, networkstack | §9 make_key 生成 |
+| **AOSP 默认复制**（subject `CN=Android`/`com_android_*`） | bluetooth, cts_uicc_2021, sdk_sandbox, testkey, **nfc** | 从 `build/make/target/product/security/` 直接 `cp` 到 `~/.arsenals-certs/` |
+
+⚠️ **nfc key**：AOSP 16（Android 16）NFC apex 需要 nfc 证书。ArsenalsOS 2024-04 key 集**无 nfc**（AOSP 16 才引入 NFC apex）。**正确做法是从 AOSP 默认复制**：`cp build/make/target/product/security/nfc.pk8 build/make/target/product/security/nfc.x509.pem ~/.arsenals-certs/`，**不是 make_key 生成**——nfc 属"特定 key"类，和 bluetooth 等一样用 AOSP 默认。
+
+⚠️ **subject 大小写**：实际 releasekey 等是 `CN=Arsenals`（大写 A）；本文早期版本写 `CN=arsenals`（小写）是笔误，已修正。生成 key 务必用 `CN=Arsenals`，否则与既有 key 集 subject 不一致。
+
+⚠️ build 在 `vendor/lineage-priv`（symlink → `~/.arsenals-certs`）找**所有** key（含 nfc），因 `PRODUCT_DEFAULT_DEV_CERTIFICATE := vendor/lineage-priv/releasekey`。故 `~/.arsenals-certs` 必须含全量 key。新机器重装后要：(1) §9 make_key 生成自定义 5 个（releasekey/platform/shared/media/networkstack）；(2) `cp build/make/target/product/security/{bluetooth,cts_uicc_2021,sdk_sandbox,testkey,nfc}.{pk8,x509.pem} ~/.arsenals-certs/` 复制 AOSP 默认 5 个；(3) `ln -sfn ~/.arsenals-certs vendor/lineage-priv`（每台机器手动建，device tree 不代建，非 manifest project）。
 
 ## 10. 关键脚本（`lineage/scripts/`）
 
@@ -222,7 +237,7 @@ ArsenalsOS（21.0 二次分发 OS）已移植到本 23.2 树。核心定制（�
 |---|---|---|
 | rebrand | `ro.lineage.*`→`ro.arsenals.*`、zip 前缀 `arsenals-`、`LINEAGE_BUILDTYPE:=OFFICIAL` | vendor/lineage(version.mk/common_mobile.mk/backuptool/property_contexts/bacon.mk/envsetup.sh) |
 | product 名 | `arsenals_marble` | device/xiaomi/marble/arsenals_marble.mk + AndroidProducts.mk |
-| releasekey | `~/.arsenals-certs/`(9 套 key,home 持久)→`vendor/lineage-priv/` symlink;`PRODUCT_DEFAULT_DEV_CERTIFICATE:=vendor/lineage-priv/releasekey` | device/xiaomi/marble + vendor/lineage-priv |
+| releasekey | `~/.arsenals-certs/`(10 套 key=5 自定义 releasekey/platform/shared/media/networkstack + 5 AOSP 默认复制 bluetooth/cts_uicc_2021/sdk_sandbox/testkey/nfc,见 §9.1;home 持久)→`vendor/lineage-priv/` symlink;`PRODUCT_DEFAULT_DEV_CERTIFICATE:=vendor/lineage-priv/releasekey` | device/xiaomi/marble + vendor/lineage-priv |
 | AOS 系统服务 | `Context.AOS_SERVICE="aos"`(@hide)+SystemServer.startAosServices 反射+vendor/arsenals/{aos,arsenalsos} boot jar | frameworks/base + vendor/arsenals + build/soong package_allowed_list |
 | sepolicy | `aos_service` 专用域(type+service_contexts+system_server/untrusted_app_all allow) | system/sepolicy + device/arsenals/sepolicy |
 | KernelSU | `=y` 编进 Image,KSU_VERSION=32563,签名 0x03fd(rootarsenals) | kernel/arsenals/kernelsu(浅克隆已 unshallow,count=2563) |
@@ -272,9 +287,11 @@ mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
 
 ArsenalsOS 23.2 的固定点 manifest(上游锁 commit,ArsenalsOs fork 用 aos26 分支可更新),另一台机器一条命令 sync,不用 local_manifests。
 
-- **manifest 仓**:`ArsenalsOs/aos_manifest:aos26` 分支(commit `fad70ed`)
+- **manifest 仓**:`ArsenalsOs/aos_manifest:aos26` 分支(commit `9263dca`,含 wlan 幽灵sha修复+sm8450-common fork)
 - **结构**:单 `default.xml`(1177 project,合并清华 default.xml + local_manifests/{arsenals.xml,marble.xml},已 resolve remove-project + duplicate)
 - **revision**:1161 上游锁当前 lineage-23.2 HEAD commit(固定点)+ 14 ArsenalsOs fork `revision="aos26"`(不锁,可更新)+ 2 darwin prebuilts 保留分支(Linux 不 sync)
+- **⚠️ 2026-07-27 持久化修复(全 push 到 ArsenalsOs fork)**:(1) `hardware/qcom-caf/wlan` revision `f8a7ef82`(幽灵sha,远程从未存在,生成脚本锁本地commit未校验)→ `d9e72d8`(lineage-23.2 HEAD);(2) `vendor/xiaomi/sm8450-common`(TheMuppets) fork 到 `ArsenalsOs/aos26_vendor_xiaomi_sm8450-common:aos26`(含 soong_namespace legacy imports,修 cnss-daemon libcld80211);(3) `device/xiaomi/marble/device.mk` 加 `hardware/qcom-caf/wlan/legacy` 到 PRODUCT_SOONG_NAMESPACES(修 wpa_supplicant lib_driver_cmd_qcwcn,上游 BoardConfigQcom.mk 锁不存在的 wlan/qcwcn);(4) `vendor/lineage/build/tools/merge_dtbs.py` catch graphlib.CycleError(23.2 上游无cycle处理,ziyi/diting camera sensor pinctrl 互引);(5) `~/.arsenals-certs/nfc` 从 AOSP 默认复制(AOSP 16 NFC apex,见 §9.1)
+- **⚠️ vendor/gapps(MindTheGapps)例外**:仍需手动 `git clone -b baklava https://github.com/MindTheGapps/vendor_gapps.git vendor/gapps`(第三方 GApps,刻意不纳入 manifest,是"一条命令 sync"的唯一例外,见 §15/ARSENALSOS_PORTING.md §8.4)
 - **remote**:`github`(fetch=`..` 相对 manifest 仓,repo `..` 去两段 → `github.com/LineageOS/`)+ `aosp`(googlesource)+ `lineageos`+ `arsenals`(github.com/ArsenalsOs/)
 - **build/make 6 linkfile**(对齐 arsenals.xml)
 
