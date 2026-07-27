@@ -1,7 +1,7 @@
 # CLAUDE.md — ArsenalsLOS (LineageOS 23.2) 工作树
 
 > 本文件供 Claude（与维护者）快速理解本仓库的性质、构建方式与版本管理边界。
-> 所有结论基于 2026-07-22 对 `/root/arsenals/aos/los` 的实际分析。
+> 所有结论基于 2026-07-22 对 `/home/lu/arsenals/aos/aos26` 的实际分析。
 
 ## 1. 项目概述
 
@@ -15,7 +15,7 @@
 | 当前使用的 manifest remote | `https://mirrors.tuna.tsinghua.edu.cn/git/lineageOS/LineageOS/android.git` |
 | 子项目数量 | **1164** 个 git 项目（`.repo/project.list`） |
 | 自定义 local_manifests | **有**：`.repo/local_manifests/{arsenals.xml,marble.xml}`（ArsenalsOS fork aos26 + xiaomi marble 设备，详见 §14-17） |
-| 工作目录 | `/root/arsenals/aos/los` |
+| 工作目录 | `/home/lu/arsenals/aos/aos26` |
 | 编译机资源 | 16 核 / 49 GB RAM / 16 GB swap |
 
 版本号组成：`LINEAGE_VERSION = 23.2-<date>-<buildtype><extra>-<build>`（见 `vendor/lineage/config/version.mk`）。
@@ -68,7 +68,7 @@
 
 ```bash
 # 0) 进入工作目录
-cd /root/arsenals/aos/los
+cd /home/lu/arsenals/aos/aos26
 
 # 1) 加载构建环境（build/envsetup.sh -> build/make/envsetup.sh，会链式 source vendor/lineage/build/envsetup.sh，
 #    从而注册 breakfast/brunch/eat 等函数）
@@ -248,7 +248,7 @@ ArsenalsOS（21.0 二次分发 OS）已移植到本 23.2 树。核心定制（�
 ## 15. 编译流程（ArsenalsOS）
 
 ```bash
-cd /root/arsenals/aos/los
+cd /home/lu/arsenals/aos/aos26
 source build/make/envsetup.sh     # 直接路径,绕 ugrep/symlink 问题(不用 build/envsetup.sh 软链)
 breakfast marble                  # ⚠️ device 名 marble,不是 arsenals_marble!(vendor/lineage breakfast 拼 arsenals_$target = lunch arsenals_marble-bp4a-userdebug)
 mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
