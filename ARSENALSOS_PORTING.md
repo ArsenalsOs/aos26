@@ -1,6 +1,6 @@
 # ArsenalsOS 定制改动全量检索与移植清单
 
-> 检索日期 2026-07-22。基线：ArsenalsOS = LineageOS 21.0 / Android 14（AOSP tag `android-14.0.0_r25`，manifest `ArsenalsOs/aos_manifest`）。移植目标：LineageOS 23.2 / Android 16（目标树 `/root/arsenals/aos/los`，AOSP tag `android-16.0.0_r4`，release `bp4a`）。
+> 检索日期 2026-07-22。基线：ArsenalsOS = LineageOS 21.0 / Android 14（AOSP tag `android-14.0.0_r25`，manifest `ArsenalsOs/aos_manifest`）。移植目标：LineageOS 23.2 / Android 16（目标树 `/home/lu/arsenals/aos/aos26`，AOSP tag `android-16.0.0_r4`，release `bp4a`）。
 > 源码树 `/root/arsenals/aos/aos`（旧）。下列结论由 4 路并行检索 agent + 直接读取源码交叉验证（含在 los/23.2 目标树实测比对）得出。
 
 ---
@@ -274,7 +274,7 @@ eat                             # adb sideload arsenals-*.zip
 
 **23.2 目标（los，需移植到位后）**：
 ```
-cd /root/arsenals/aos/los
+cd /home/lu/arsenals/aos/aos26
 . build/envsetup.sh
 breakfast marble userdebug       # 23.2 breakfast 先 source vars/aosp_target_release, 再 lunch
 # = lunch arsenals_marble-bp4a-userdebug  （三段式 PRODUCT-RELEASE-variant）
