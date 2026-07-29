@@ -99,7 +99,8 @@ eat                                # 自动 adb sideload 最新 lineage-*.zip（
 ## 7. 编译环境（参考 ArsenalsOs 搭建文档，通用于本树）
 
 - **系统**：WSL2 / Ubuntu 22.04；`sudo ln -s /usr/bin/python3 /usr/bin/python`。
-- **apt 依赖**：`bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev`
+- **apt 依赖**（Ubuntu 22.04 包名）：`bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev`
+- **⚠️ Ubuntu 26.04**（2026-07 验证）：libncurses5/libtinfo5/liblz4-tool/libxml2 移除/改名。`sudo apt install -y git-lfs lz4 libxml2-dev`（liblz4-tool→lz4、libxml2→libxml2-dev 等价覆盖）；libncurses5/libtinfo5 26.04 无，host prebuilt 需 .so.5 → `sudo ln -sf /usr/lib/x86_64-linux-gnu/lib{ncurses,tinfo}.so.6 /usr/lib/x86_64-linux-gnu/lib{ncurses,tinfo}.so.5` + 32 位 `sudo ln -sf /usr/lib32/lib{ncurses,tinfo}.so.6 /usr/lib32/lib{ncurses,tinfo}.so.5` + `sudo ldconfig`（详见记忆 `ncurses5-symlink-26.04`）；dev 侧装 `libncurses-dev lib32ncurses-dev`（6.6，-lncurses 解析 .so.6 OK）
 - **repo 工具**：`~/bin/repo`；`export REPO_URL='http://mirrors.tuna.tsinghua.edu.cn/git/git-repo'`；`git config --global url.http://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com`
 - **代理**：`export ALL_PROXY="http://<host_ip>:10809"`（host_ip 见 `/etc/resolv.conf`）
 - **swap**：16 GB（`.wslconfig` 的 `[wsl2] swap=16GB`，或 `/swapfile` + `mkswap`/`swapon`）
