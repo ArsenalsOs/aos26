@@ -12,9 +12,9 @@
 | OS 分支 | `lineage-23.2` |
 | Release config | `BP4A`（`vendor/lineage/vars/aosp_target_release` → `aosp_target_release=bp4a`） |
 | Manifest 上游 | `https://github.com/LineageOS/android.git`（本树实际用清华镜像，见下） |
-| 当前使用的 manifest remote | `https://mirrors.tuna.tsinghua.edu.cn/git/lineageOS/LineageOS/android.git` |
-| 子项目数量 | **1164** 个 git 项目（`.repo/project.list`） |
-| 自定义 local_manifests | **有**：`.repo/local_manifests/{arsenals.xml,marble.xml}`（ArsenalsOS fork aos26 + xiaomi marble 设备，详见 §14-17） |
+| 固定点 manifest | `ArsenalsOs/aos_manifest:aos26`（commit `9263dca`，一条命令 sync，无 local_manifests，详见 §19） |
+| 子项目数量 | **1175** 个 git 项目（`.repo/project.list`，含 14 个 ArsenalsOs fork aos26 分支 + 1161 上游锁 commit + 2 darwin 保留分支） |
+| 本地 local_manifests | 仅 `.repo/local_manifests/skip-darwin.xml`（跳过 2 个 darwin prebuilt，§19.2）；arsenals.xml/marble.xml 已并入固定点 manifest |
 | 工作目录 | `/home/lu/arsenals/aos/aos26` |
 | 编译机资源 | 16 核 / 49 GB RAM / 16 GB swap |
 
@@ -101,7 +101,7 @@ eat                                # 自动 adb sideload 最新 lineage-*.zip（
 - **系统**：WSL2 / Ubuntu 22.04；`sudo ln -s /usr/bin/python3 /usr/bin/python`。
 - **apt 依赖**：`bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev`
 - **repo 工具**：`~/bin/repo`；`export REPO_URL='http://mirrors.tuna.tsinghua.edu.cn/git/git-repo'`；`git config --global url.http://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com`
-- **代理**：`export ALL_PROXY="http://<host_ip>:10811"`（host_ip 见 `/etc/resolv.conf`）
+- **代理**：`export ALL_PROXY="http://<host_ip>:10809"`（host_ip 见 `/etc/resolv.conf`）
 - **swap**：16 GB（`.wslconfig` 的 `[wsl2] swap=16GB`，或 `/swapfile` + `mkswap`/`swapon`）
 - **ccache**：`export USE_CCACHE=1`、`export CCACHE_EXEC=/usr/bin/ccache`、`export CCACHE_DIR=~/ccache`、`ccache -M 50G`、`ccache -s` 查看状态
 
@@ -298,7 +298,7 @@ ArsenalsOS 23.2 的固定点 manifest(上游锁 commit,ArsenalsOs fork 用 aos26
 **另一台机器 sync:**
 ```bash
 git config --global url.http://mirrors.tuna.tsinghua.edu.cn/git/AOSP/.insteadof https://android.googlesource.com
-export https_proxy=http://<host_ip>:10811   # 拉 github remote(LineageOS 上游)
+export https_proxy=http://<host_ip>:10809   # 拉 github remote(LineageOS 上游)
 repo init -u https://github.com/ArsenalsOs/aos_manifest.git -b aos26
 repo sync -c -j$(nproc --all) --no-tags
 # 编译:source build/make/envsetup.sh && breakfast marble && mka bacon
