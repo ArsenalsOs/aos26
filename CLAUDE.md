@@ -280,7 +280,7 @@ mka bacon                         # 编译+打 OTA zip(增量 ~12min,全量 ~3h)
 ## 18. ArsenalsOS 参考
 
 - 移植清单:`ARSENALSOS_PORTING.md`(顶层 git,含逐 commit 核查+勘误+移植后状态)
-- 记忆 `~/.claude/projects/-root-arsenals-aos-los/memory/`:project-arsenalslos, project-arsenalsos-porting, reference-arsenalsos-env-setup, reference-kernelsu-loading-detection, reference-pif-trickystore, reference-m2-fork-persistence, feedback-no-plaintext-in-cleanup
+- 记忆 `~/.claude/projects/-home-lu-arsenals-aos-aos26/memory/`(lu 用户,2026-07-27 重存 8 条):aos26-source-tree, manifest-wlan-ghost-sha, themuppets-shallow-clone-trap, soong-namespace-upstream-bug, merge-dtbs-cycle-bug, arsenalsos-key-strategy, manifest-integrity-audit, ncurses5-symlink-26.04（索引见 MEMORY.md）
 - 固定点 manifest:`ArsenalsOs/aos_manifest:aos26`(另一台机器 `repo init -u ... -b aos26` 一条命令 sync,见 §19)
 - 21.0 源 `/root/arsenals/aos/aos`(21.0 仓全 push 后可删,见 §19.3)
 
